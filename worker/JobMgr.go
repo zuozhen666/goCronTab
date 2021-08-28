@@ -82,7 +82,8 @@ func (jobMgr *JobMgr) watchJobs() (err error) {
 		// 反序列化json得到Job
 		if job, err = common.UnpackJob(kvpair.Value); err == nil {
 			jobEvent = common.BuildJobEvent(common.JOB_EVENT_SAVE, job)
-			// TODO:把这个job同步给scheduler（调度协程）
+			// 把这个job同步给scheduler（调度协程
+			G_scheduler.PushJobEvent(jobEvent)
 		}
 	}
 	// 2.从该revision向后监听变化事件
@@ -108,7 +109,8 @@ func (jobMgr *JobMgr) watchJobs() (err error) {
 					// 构造一个删除Event
 					jobEvent = common.BuildJobEvent(common.JOB_EVENT_DELETE, job)
 				}
-				//TODO：推一个事件给scheduler
+				// 推一个事件给scheduler
+				G_scheduler.PushJobEvent(jobEvent)
 			}
 		}
 	}()
