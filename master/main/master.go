@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/goCronTab/master"
 	"runtime"
+	"time"
 )
 
 var (
@@ -36,12 +37,21 @@ func main() {
 		goto ERR
 	}
 
+	// 任务管理器
+	if err = master.InitJobMgr(); err != nil {
+		goto ERR
+	}
+
 	// 启动Api HTTP服务
 	if err = master.InitApiServer(); err != nil {
 		goto ERR
 	}
 
 	// 正常退出
+	fmt.Println("everything is OK")
+	for {
+		time.Sleep(1 * time.Second)
+	}
 	return
 
 ERR:
