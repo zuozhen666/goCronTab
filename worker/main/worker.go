@@ -14,8 +14,8 @@ var (
 
 // 解析命令行参数
 func initArgs() {
-	// master -config ./master.json
-	flag.StringVar(&confFile, "config", "./master.json", "指定master.json")
+	// worker -config ./worker.json
+	flag.StringVar(&confFile, "config", "./worker.json", "指定master.json")
 	flag.Parse()
 }
 
