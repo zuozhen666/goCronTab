@@ -1,6 +1,9 @@
 package common
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"strings"
+)
 
 // 定时任务
 type Job struct {
@@ -27,4 +30,35 @@ func BuildResponse(errno int, msg string, data interface{}) (resp []byte, err er
 
 	resp, err = json.Marshal(response)
 	return
+}
+
+// 反序列化job
+func UnpackJob(value []byte) (ret *Job, err error) {
+	var (
+		job *Job
+	)
+	job = &Job{}
+	if err = json.Unmarshal(value, job); err != nil {
+		return
+	}
+	ret = job
+	return
+}
+
+// 从etcd的key中提取任务名
+func ExtractJobName(jobKey string) string {
+	return strings.TrimPrefix(jobKey, JOB_SAVE_DIR)
+}
+
+// 任务变化事件有两种：更新/删除
+type JobEvent struct {
+	EventType int //SAVE,DELETE
+	job       *Job
+}
+
+func BuildJobEvent(eventType int, job *Job) (jobEvent *JobEvent) {
+	return &JobEvent{
+		EventType: eventType,
+		job:       job,
+	}
 }
