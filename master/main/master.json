@@ -10,5 +10,7 @@
     "127.0.0.1:2379"
   ],
   "etcd的连接超时": "单位毫秒",
-  "etcdDialTimeout": 5000
+  "etcdDialTimeout": 5000,
+  "web页面跟目录": "静态页面，前后端分离开发",
+  "webroot": "./webroot"
 }
