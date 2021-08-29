@@ -56,6 +56,40 @@ func InitJobMgr() (err error) {
 	// 启动监听
 	G_jobMgr.watchJobs()
 
+	// 启动监听killer
+	G_jobMgr.watchKiller()
+
+	return
+}
+
+// 监听强杀任务通知
+func (jobMgr *JobMgr) watchKiller() (err error) {
+	var (
+		watchChan  clientv3.WatchChan
+		watchResp  clientv3.WatchResponse
+		watchEvent *clientv3.Event
+		jobEvent   *common.JobEvent
+		jobName    string
+		job        *common.Job
+	)
+	go func() {
+		// 监听/cron/killer目录的变化
+		watchChan = jobMgr.watcher.Watch(context.TODO(), common.JOB_KILLER_DIR, clientv3.WithPrefix())
+		for watchResp = range watchChan {
+			for _, watchEvent = range watchResp.Events {
+				switch watchEvent.Type {
+				case mvccpb.PUT: // 杀死任务事件
+					jobName = common.ExtractKillerName(string(watchEvent.Kv.Key))
+					job = &common.Job{Name: jobName}
+					jobEvent = common.BuildJobEvent(common.JOB_EVENT_KILL, job)
+					// 变化推给scheduler
+					G_scheduler.PushJobEvent(jobEvent)
+				case mvccpb.DELETE: //killer标志过期，自动删除
+				}
+			}
+
+		}
+	}()
 	return
 }
 
@@ -66,7 +100,7 @@ func (jobMgr *JobMgr) watchJobs() (err error) {
 		kvpair            *mvccpb.KeyValue
 		job               *common.Job
 		watchStartVersion int64
-		waitChan          clientv3.WatchChan
+		watchChan         clientv3.WatchChan
 		watchResp         clientv3.WatchResponse
 		watchEvent        *clientv3.Event
 		jobName           string
@@ -91,9 +125,9 @@ func (jobMgr *JobMgr) watchJobs() (err error) {
 		// 从GET时刻的后续版本开始监听变化
 		watchStartVersion = getResp.Header.Revision + 1
 		// 监听/cron/jobs目录的后续变化
-		waitChan = jobMgr.watcher.Watch(context.TODO(), common.JOB_SAVE_DIR, clientv3.WithRev(watchStartVersion), clientv3.WithPrefix())
+		watchChan = jobMgr.watcher.Watch(context.TODO(), common.JOB_SAVE_DIR, clientv3.WithRev(watchStartVersion), clientv3.WithPrefix())
 		// 处理监听事件
-		for watchResp = range waitChan {
+		for watchResp = range watchChan {
 			for _, watchEvent = range watchResp.Events {
 				switch watchEvent.Type {
 				case mvccpb.PUT: //任务保存事件
