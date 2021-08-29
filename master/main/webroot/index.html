@@ -78,9 +78,66 @@
         </div><!-- /.modal-content -->
     </div><!-- /.modal-dialog -->
 </div><!-- /.modal -->
+
+<!--日志模态框-->
+<div id="log-modal" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span>
+                </button>
+                <h4 class="modal-title">任务日志</h4>
+            </div>
+            <div class="modal-body">
+                <table id="log-list" class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>shell命令</th>
+                        <th>错误原因</th>
+                        <th>脚本输出</th>
+                        <th>计划开始时间</th>
+                        <th>实际调度时间</th>
+                        <th>开始执行时间</th>
+                        <th>执行结束时间</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
 <script>
     // 页面加载完成后回调函数
     $(document).ready(function () {
+
+        function timeFormat(millseconds) {
+            function paddingNum(num, n) {
+                var len = num.toString().length
+                while (len < n) {
+                    num = '0' + num
+                    len++
+                }
+                return num
+            }
+
+            var date = new Date(millseconds)
+            var year = date.getFullYear()
+            var month = paddingNum(date.getMonth() + 1, 2)
+            var day = paddingNum(date.getDay(), 2)
+            var hour = paddingNum(date.getHours(), 2)
+            var minute = paddingNum(date.getMinutes(), 2)
+            var second = paddingNum(date.getSeconds(), 2)
+            var millsecond = paddingNum(date.getMilliseconds(), 3)
+            return year + "-" + month + "-" + day + "-" + hour + ":" + minute + ":" + second + "." + millsecond
+        }
+
         // 1.绑定按钮的事件处理函数
         // 用javascript委托机制，DOM事件冒泡的一个关键原理
         $("#job-list").on("click", ".edit-job", function (event) {
@@ -140,6 +197,37 @@
             $('#edit-cronExpr').val("")
             $('#edit-modal').modal('show')
         })
+        // 查看任务日志
+        $('#job-list').on('click', '.log-job', function () {
+            $('#log-list').empty()
+            // 获取任务名
+            var jobName = $(this).parents('tr').children('.job-name').text()
+            // 请求/job/log接口
+            $.ajax({
+                url: "/job/log",
+                dataType: 'json',
+                data: {name: jobName},
+                success: function (resp) {
+                    if (resp.errno != 0) {
+                        return
+                    }
+                    var logList = resp.data
+                    for (var i = 0; i < logList.length; i++) {
+                        var log = logList[i]
+                        var tr = $('<tr>')
+                        tr.append($('<td>').html(log.command))
+                        tr.append($('<td>').html(log.err))
+                        tr.append($('<td>').html(log.output))
+                        tr.append($('<td>').html(timeFormat(log.planTime)))
+                        tr.append($('<td>').html(timeFormat(log.scheduleTime)))
+                        tr.append($('<td>').html(timeFormat(log.startTime)))
+                        tr.append($('<td>').html(timeFormat(log.endTime)))
+                    }
+                }
+            })
+            // 弹出模态框
+            $('#log-modal').modal('show')
+        })
 
         // 2.定义一个函数用于刷新任务列表
         function rebuildJobList() {
@@ -166,6 +254,7 @@
                             .append('<button class="btn btn-info edit-job">编辑</button>')
                             .append('<button class="btn btn-danger delete-job">删除</button>')
                             .append('<button class="btn btn-warning kill-job">强杀</button>')
+                            .append('<button class="btn btn-success log-job">日志</button>')
                         tr.append($('<td>').append(toolbar))
                         $('#job-list').append(tr)
                     }
